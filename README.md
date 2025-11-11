@@ -154,8 +154,21 @@ export default router
 
 ## 📄 许可证
 
-MIT License
+本项目采用 [MIT 许可证](LICENSE)。
+
+## 📝 更新日志
+
+### 最新更新
+- ✅ 添加了完整的 MIT 许可证文件
+- ✅ 修复了 TypeScript 类型声明问题
+- ✅ 符合 ESLint Vue 组件命名规范（多单词组件名）
+- ✅ 完整的项目文档和开发指南
 
 ## 🤝 贡献
 
-欢迎提交Issue和Pull Request来改进这个模板！
+欢迎提交 Issue 和 Pull Request 来改进这个模板！
+
+## 📞 联系方式
+
+- 项目作者: Sogrey
+- GitHub: [https://github.com/Sogrey/vue3-ol-template](https://github.com/Sogrey/vue3-ol-template)
