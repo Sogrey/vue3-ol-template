@@ -192,6 +192,8 @@ export default router
 ## 📝 更新日志
 
 ### 最新更新
+- ✅ 优化 OLScene.vue 组件，使用 OpenLayers 引擎封装层
+- ✅ 修复 TypeScript 类型定义，将 OLMapOptions 接口属性改为可选
 - ✅ 添加了完整的 MIT 许可证文件
 - ✅ 修复了 TypeScript 类型声明问题
 - ✅ 符合 ESLint Vue 组件命名规范（多单词组件名）
@@ -201,6 +203,15 @@ export default router
 - ✅ 详细的中文代码注释
 - ✅ 更新代码注释时间戳到当前日期
 - ✅ 优化代码文档生成配置
+
+### 详细修改
+- **OLScene.vue**: 
+  - 改用 OpenLayers 引擎封装层进行地图初始化
+  - 优化销毁逻辑，使用引擎的 destroy 方法
+  - 删除冗余的 Map 直接导入
+- **index.types.ts**: 
+  - 将 OLMapOptions 接口的 target、view、layers 属性改为可选 (?)
+  - 提高类型定义的灵活性
 
 ## 🤝 贡献
 

@@ -34,20 +34,20 @@ declare global {
      * 用于指定地图渲染的目标容器
      * @example 'map-container' 或 'map'
      */
-    target: string
+    target?: string
 
     /**
      * 地图视图配置
      * 定义地图的显示中心、缩放级别等视图参数
      */
-    view: View
+    view?: View
 
     /**
      * 地图图层数组
      * 包含所有要显示在地图上的图层
      * @example [tileLayer, vectorLayer, markerLayer]
      */
-    layers: Layer[]
+    layers?: Layer[]
 
   }
 
