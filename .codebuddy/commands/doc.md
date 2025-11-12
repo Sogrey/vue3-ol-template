@@ -61,6 +61,7 @@ js / TS / css (scss/sass/less) 文件注释的格式为：
 ```
 
 > 适用于 .ts 和 .js 文件 以及 .vue 文件中 script 标签中的代码块
+> 注释中的时间日期 @date 和 @lastModify 会根据当前时间自动更新， @date 创建日期只在第一次创建时添加更新
 
 ---
 
@@ -78,5 +79,6 @@ html / vue 文件注释的格式为：
 ```
 
 > 适用于 .html 和 .vue 文件
+> 注释中的时间日期 @date 和 @lastModify 会根据当前时间自动更新， @date 创建日期只在第一次创建时添加更新
 
 ---

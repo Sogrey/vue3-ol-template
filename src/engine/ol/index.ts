@@ -2,8 +2,8 @@
  * index.ts
  * OpenLayers 引擎核心类
  * @author Sogrey
- * @date 2025-06-01 00:00:00
- * @lastModify 2025-06-01 00:00:00
+ * @date 2025-11-13 00:00:00
+ * @lastModify 2025-11-13 01:09:00
  * @version 1.0.0
  */
 
@@ -20,13 +20,13 @@ import View from 'ol/View.js';
  * // 初始化地图
  * const engine = OLEngine.getInstance();
  * engine.init('map-container');
- * 
+ *
  * // 使用地图实例
  * const map = engine.map;
  * if (map) {
  *   // 地图操作
  * }
- * 
+ *
  * // 销毁地图
  * engine.destroy();
  * ```
@@ -93,7 +93,7 @@ export default class OLEngine {
    * ```typescript
    * // 基本初始化
    * engine.init('map-container');
-   * 
+   *
    * // 带自定义配置初始化
    * engine.init('map-container', {
    *   view: new View({

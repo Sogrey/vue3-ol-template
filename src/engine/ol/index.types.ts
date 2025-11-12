@@ -2,8 +2,8 @@
  * index.types.ts
  * OpenLayers 类型定义文件
  * @author Sogrey
- * @date 2025-06-01 00:00:00
- * @lastModify 2025-06-01 00:00:00
+ * @date 2025-11-13 00:00:00
+ * @lastModify 2025-11-13 01:09:00
  * @version 1.0.0
  */
 
