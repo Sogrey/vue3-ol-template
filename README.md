@@ -192,6 +192,7 @@ export default router
 ## 📝 更新日志
 
 ### 最新更新
+- ✅ 更新 OLScene.vue 地图视图配置，优化显示范围和投影
 - ✅ 优化 OLScene.vue 组件，使用 OpenLayers 引擎封装层
 - ✅ 修复 TypeScript 类型定义，将 OLMapOptions 接口属性改为可选
 - ✅ 添加了完整的 MIT 许可证文件
@@ -206,6 +207,9 @@ export default router
 
 ### 详细修改
 - **OLScene.vue**: 
+  - 更新地图中心坐标 (104.0636, 30.6609) - 中国西南地区
+  - 调整缩放级别到 5，设置最小缩放 1 和最大缩放 20
+  - 设置投影为 EPSG:4326 (WGS84坐标系)
   - 改用 OpenLayers 引擎封装层进行地图初始化
   - 优化销毁逻辑，使用引擎的 destroy 方法
   - 删除冗余的 Map 直接导入

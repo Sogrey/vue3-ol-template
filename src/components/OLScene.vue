@@ -19,8 +19,11 @@ onMounted(() => {
   // 初始化地图
   engine.init('map', {
     view: new View({
-      center: [108.9608, 34.26641], // 西安坐标
-      zoom: 2
+      center: [104.0635986160487, 30.660919181071225],
+      zoom: 5,
+      minZoom: 1,
+      maxZoom: 20,
+      projection: "EPSG:4326"
     }),
     layers: [
       new TileLayer({
