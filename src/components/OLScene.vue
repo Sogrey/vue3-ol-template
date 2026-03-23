@@ -38,6 +38,8 @@ onMounted(() => {
     // 地图操作
   }
 
+  window.map2d = engine
+
 })
 
 onUnmounted(() => {

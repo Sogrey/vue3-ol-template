@@ -11,6 +11,8 @@ import * as Utils from './utils.ts'
 import Map from 'ol/Map.js';
 import View from 'ol/View.js';
 
+import Camera from './camera/index.ts';
+
 /**
  * OLEngine
  * OpenLayers 地图引擎单例类
@@ -39,6 +41,9 @@ export default class OLEngine {
    * 存储当前活跃的地图对象
    */
   private _map: Map | null = null
+
+  // 模块
+  Camera: Camera = new Camera(this)
 
   /**
    * 私有构造函数
