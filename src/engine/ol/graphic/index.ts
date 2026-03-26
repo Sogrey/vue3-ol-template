@@ -3,7 +3,7 @@ import OLEngine from '..'
 import Map from 'ol/Map.js'
 import VectorSource from 'ol/source/Vector.js'
 import VectorLayer from 'ol/layer/Vector.js'
-import { Draw, Modify, Snap } from 'ol/interaction.js'
+import { Draw, Modify, Snap, Pointer } from 'ol/interaction.js'
 import { Geometry } from 'ol/geom.js'
 import { Style, Fill, Stroke, Text, Icon as OLIcon, Circle as OLCircle } from 'ol/style.js'
 import Feature from 'ol/Feature.js'
@@ -28,7 +28,13 @@ export enum GraphicType {
   /** 多面 */
   MultiPolygon = 'MultiPolygon',
   /** 圆 */
-  Circle = 'Circle'
+  Circle = 'Circle',
+  /** 椭圆 */
+  Ellipse = 'Ellipse',
+  /** 正方形 */
+  Square = 'Square',
+  /** 矩形 */
+  Box = 'Box'
 }
 
 /**
@@ -81,6 +87,17 @@ export interface StyleOptions {
   textRotation?: number
   /** 文本最大显示分辨率 */
   textMaxResolution?: number
+  /** 编辑顶点样式 */
+  vertexStyle?: {
+    /** 顶点填充颜色 */
+    fillColor?: string
+    /** 顶点半径 */
+    radius?: number
+    /** 顶点描边颜色 */
+    strokeColor?: string
+    /** 顶点描边宽度 */
+    strokeWidth?: number
+  }
 }
 
 /**
@@ -89,7 +106,7 @@ export interface StyleOptions {
 export interface DrawOptions extends StyleOptions {
   /** 图形类型 */
   type: GraphicType
-  /** 是否可编辑 */
+  /** 图层是否可编辑，默认 true */
   editable?: boolean
   /** 是否吸附 */
   snap?: boolean
@@ -116,6 +133,200 @@ export interface AddFeatureOptions extends StyleOptions {
 }
 
 /**
+ * 椭圆编辑交互类
+ * 只显示中心点、长轴端点和短轴端点作为控制点
+ */
+class EllipseEditInteraction extends Pointer {
+  private _source: VectorSource
+  private _overlaySource: VectorSource
+  private _selectedFeature: Feature | null = null
+  private _overlayFeatures: Feature[] = []
+  private _dragType: 'center' | 'axis1' | 'axis2' | null = null
+
+  constructor(source: VectorSource, overlaySource: VectorSource) {
+    super({
+      handleDownEvent: (evt) => this._handleDown(evt),
+      handleDragEvent: (evt) => { this._handleDrag(evt); return false; },
+      handleUpEvent: (evt) => { this._handleUp(evt); return true; },
+      handleMoveEvent: (evt) => this._handleMove(evt)
+    })
+
+    this._source = source
+    this._overlaySource = overlaySource
+  }
+
+  setMap(map: Map | null): void {
+    super.setMap(map)
+    if (!map) {
+      this._clearOverlays()
+    }
+  }
+
+  private _handleDown(evt: any): boolean {
+    const feature = evt.map.forEachFeatureAtPixel(evt.pixel, (f: any) => f)
+    if (feature && this._overlayFeatures.includes(feature)) {
+      this._dragType = feature.get('controlType')
+      return true
+    }
+    return false
+  }
+
+  private _handleDrag(evt: any): void {
+    if (!this._selectedFeature || !this._dragType) return
+
+    const coord = evt.coordinate
+    const geometry = this._selectedFeature.getGeometry() as Polygon
+    const points = this._getControlPoints(geometry)
+
+    if (this._dragType === 'center') {
+      // 平移整个椭圆
+      const dx = coord[0] - points.center[0]
+      const dy = coord[1] - points.center[1]
+      geometry.translate(dx, dy)
+    } else if (this._dragType === 'axis1' || this._dragType === 'axis2') {
+      // 调整轴长
+      const dx = coord[0] - points.center[0]
+      const dy = coord[1] - points.center[1]
+      const newRadius = Math.sqrt(dx * dx + dy * dy)
+
+      // 重新计算控制点
+      this._updateEllipse(geometry, points, this._dragType, newRadius)
+    }
+
+    this._selectedFeature.changed()
+    this._updateOverlays()
+  }
+
+  private _handleUp(_evt: any): void {
+    this._dragType = null
+  }
+
+  private _handleMove(evt: any): boolean {
+    const map = this.getMap()
+    if (!map) return false
+
+    const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => f)
+    const target = map.getTargetElement()
+
+    if (target) {
+      if (feature && (this._overlayFeatures.includes(feature) || feature.get('isEllipse'))) {
+        target.style.cursor = 'pointer'
+      } else {
+        target.style.cursor = ''
+      }
+    }
+
+    // 点击椭圆时选中
+    if (feature && feature.get('isEllipse') && feature !== this._selectedFeature) {
+      this._selectFeature(feature)
+    }
+    return false
+  }
+
+  private _selectFeature(feature: Feature): void {
+    this._selectedFeature = feature
+    this._updateOverlays()
+  }
+
+  private _clearOverlays(): void {
+    this._overlayFeatures.forEach(f => this._overlaySource.removeFeature(f))
+    this._overlayFeatures = []
+  }
+
+  private _updateOverlays(): void {
+    this._clearOverlays()
+    if (!this._selectedFeature) return
+
+    const geometry = this._selectedFeature.getGeometry() as Polygon
+    const points = this._getControlPoints(geometry)
+    const style = new Style({
+      image: new OLCircle({
+        radius: 8,
+        fill: new Fill({ color: '#ff6600' }),
+        stroke: new Stroke({ color: '#ffffff', width: 2 })
+      })
+    })
+
+    // 创建控制点要素
+    const centerFeature = new Feature({ geometry: new Point(points.center) })
+    centerFeature.setStyle(style)
+    centerFeature.set('controlType', 'center')
+    this._overlaySource.addFeature(centerFeature)
+    this._overlayFeatures.push(centerFeature)
+
+    const axis1Feature = new Feature({ geometry: new Point(points.axis1) })
+    axis1Feature.setStyle(style)
+    axis1Feature.set('controlType', 'axis1')
+    this._overlaySource.addFeature(axis1Feature)
+    this._overlayFeatures.push(axis1Feature)
+
+    const axis2Feature = new Feature({ geometry: new Point(points.axis2) })
+    axis2Feature.setStyle(style)
+    axis2Feature.set('controlType', 'axis2')
+    this._overlaySource.addFeature(axis2Feature)
+    this._overlayFeatures.push(axis2Feature)
+  }
+
+  private _getControlPoints(geometry: Polygon): { center: Coordinate; axis1: Coordinate; axis2: Coordinate } {
+    const coords = geometry.getCoordinates()[0]
+
+    // 计算中心
+    let cx = 0, cy = 0
+    if (coords) {
+      for (const c of coords) {
+        cx += c[0]
+        cy += c[1]
+      }
+      cx /= coords.length
+      cy /= coords.length
+
+      // 找两个最远点
+      let max1 = 0, max2 = 0
+      let p1: Coordinate = [cx, cy], p2: Coordinate = [cx, cy]
+
+      for (const c of coords) {
+        const d = (c[0] - cx) ** 2 + (c[1] - cy) ** 2
+        if (d > max1) {
+          max2 = max1
+          p2 = p1
+          max1 = d
+          p1 = c
+        } else if (d > max2) {
+          max2 = d
+          p2 = c
+        }
+      }
+
+      return { center: [cx, cy], axis1: p1, axis2: p2 }
+    }
+    return { center: [cx, cy], axis1: [cx, cy], axis2: [cx, cy] }
+  }
+
+  private _updateEllipse(geometry: Polygon, points: { center: Coordinate; axis1: Coordinate; axis2: Coordinate }, dragType: string, newRadius: number): void {
+    const center = points.center
+    const axis1 = points.axis1
+    const axis2 = points.axis2
+
+    const r1 = dragType === 'axis1' ? newRadius : Math.sqrt((axis1[0] - center[0]) ** 2 + (axis1[1] - center[1]) ** 2)
+    const r2 = dragType === 'axis2' ? newRadius : Math.sqrt((axis2[0] - center[0]) ** 2 + (axis2[1] - center[1]) ** 2)
+    const angle = Math.atan2(axis1[1] - center[1], axis1[0] - center[0])
+
+    // 重新生成椭圆
+    const segments = 64
+    const newPoints: Coordinate[] = []
+    for (let i = 0; i <= segments; i++) {
+      const theta = (2 * Math.PI * i) / segments
+      const x = r1 * Math.cos(theta)
+      const y = r2 * Math.sin(theta)
+      const rx = x * Math.cos(angle) - y * Math.sin(angle)
+      const ry = x * Math.sin(angle) + y * Math.cos(angle)
+      newPoints.push([center[0] + rx, center[1] + ry])
+    }
+    geometry.setCoordinates([newPoints])
+  }
+}
+
+/**
  * Graphic 模块类
  * 提供点、线、面的绘制和管理功能
  */
@@ -129,13 +340,40 @@ export default class Graphic {
   private _currentDraw: Draw | null = null
 
   /** 当前修改交互 */
-  private _currentModify: Modify | null = null
+  private _currentModify: Modify | EllipseEditInteraction | null = null
 
   /** 当前吸附交互 */
   private _currentSnap: Snap | null = null
 
+  /** 图层编辑状态集合 */
+  private _layerEditableStates: Record<string, boolean> = {}
+
+  /** 图层的 Modify 交互集合 */
+  private _layerModifyInteractions: Record<string, Modify | EllipseEditInteraction> = {}
+
+  /** 控制点图层（用于椭圆编辑） */
+  private _overlayLayer: VectorLayer<VectorSource> | null = null
+
   constructor(engine: OLEngine) {
     this.engine = engine
+    this._initOverlayLayer()
+  }
+
+  /**
+   * 初始化控制点图层
+   */
+  private _initOverlayLayer(): void {
+    const map = this.map
+    if (!map) return
+
+    if (!this._overlayLayer) {
+      const source = new VectorSource({ wrapX: false })
+      this._overlayLayer = new VectorLayer({
+        source,
+        zIndex: 999
+      })
+      map.addLayer(this._overlayLayer)
+    }
   }
 
   /**
@@ -148,21 +386,24 @@ export default class Graphic {
   /**
    * 获取或创建图层
    * @param layerName 图层名称
+   * @param editable 是否可编辑，默认 true
    * @returns 图层实例
    */
-  private _getOrCreateLayer(layerName: string): VectorLayer<VectorSource> {
+  private _getOrCreateLayer(layerName: string, editable: boolean = true): VectorLayer<VectorSource> {
     const map = this.map
     if (!map) throw new Error('地图未初始化')
 
     let layer = this._layers[layerName]
 
     if (!layer) {
-      const source = new VectorSource()
+      const source = new VectorSource({ wrapX: false })
       layer = new VectorLayer({
         source,
         zIndex: 100 // 确保在基础图层之上
       })
       layer.set('name', layerName)
+      // 设置图层是否可编辑
+      this._layerEditableStates[layerName] = editable
       map.addLayer(layer)
       this._layers[layerName] = layer
     }
@@ -388,6 +629,22 @@ export default class Graphic {
    *   strokeWidth: 2
    * })
    *
+   * // 绘制正方形
+   * graphic.startDraw({
+   *   type: GraphicType.Square,
+   *   strokeColor: '#ff00ff',
+   *   strokeWidth: 2,
+   *   fillColor: 'rgba(255,0,255,0.3)'
+   * })
+   *
+   * // 绘制矩形
+   * graphic.startDraw({
+   *   type: GraphicType.Box,
+   *   strokeColor: '#ffff00',
+   *   strokeWidth: 2,
+   *   fillColor: 'rgba(255,255,0,0.3)'
+   * })
+   *
    * // 绘制带标签的点
    * graphic.startDraw({
    *   type: GraphicType.Point,
@@ -407,12 +664,121 @@ export default class Graphic {
     this.stopDraw()
 
     const layerName = options.layerName || 'draw-layer'
-    const layer = this._getOrCreateLayer(layerName)
+    const editable = options.editable !== false // 默认为 true
+    const layer = this._getOrCreateLayer(layerName, editable)
+
+    // 更新图层编辑状态
+    this._layerEditableStates[layerName] = editable
+
+    // 处理正方形、矩形和椭圆的几何函数
+    let geometryFunction = null
+    let drawType = options.type
+
+    if (options.type === GraphicType.Square) {
+      // 正方形：使用正多边形函数
+      drawType = GraphicType.LineString
+      // @ts-expect-error: createRegularPolygon is a static method on Draw class
+      geometryFunction = Draw.createRegularPolygon(4)
+    } else if (options.type === GraphicType.Box) {
+      // 矩形：使用矩形函数
+      drawType = GraphicType.LineString
+      // @ts-expect-error: createBox is a static method on Draw class
+      geometryFunction = Draw.createBox()
+    } else if (options.type === GraphicType.Ellipse) {
+      // 椭圆：使用 LineString + 自定义几何函数（三个点：中心、短轴端点、长轴端点）
+      drawType = GraphicType.LineString
+      // @ts-expect-error: geometryFunction 自定义类型
+      geometryFunction = (coordinates: Coordinate[], geometry?: Polygon) => {
+        const center = coordinates[0]
+        const shortAxis = coordinates[1]
+        const longAxis = coordinates[2]
+
+        if (!center || !shortAxis) {
+          return geometry || new Polygon([])
+        }
+
+        // 如果只有两个点，创建圆形
+        if (!longAxis) {
+          const dx = shortAxis[0] - center[0]
+          const dy = shortAxis[1] - center[1]
+          const radius = Math.sqrt(dx * dx + dy * dy)
+
+          // 生成圆形的点
+          const points: Coordinate[] = []
+          const segments = 64
+          for (let i = 0; i <= segments; i++) {
+            const angle = (2 * Math.PI * i) / segments
+            const x = center[0] + radius * Math.cos(angle)
+            const y = center[1] + radius * Math.sin(angle)
+            points.push([x, y])
+          }
+          return geometry ? geometry.setCoordinates([points]) : new Polygon([points])
+        }
+
+        // 计算第一次点击方向的向量和角度
+        const firstDx = shortAxis[0] - center[0]
+        const firstDy = shortAxis[1] - center[1]
+        const firstAngle = Math.atan2(firstDy, firstDx)
+        const firstRadius = Math.sqrt(firstDx * firstDx + firstDy * firstDy)
+
+        // 计算当前鼠标位置与中心的向量
+        const currentDx = longAxis[0] - center[0]
+        const currentDy = longAxis[1] - center[1]
+        const currentAngle = Math.atan2(currentDy, currentDx)
+        const currentRadius = Math.sqrt(currentDx * currentDx + currentDy * currentDy)
+
+        // 计算两个向量的夹角（绝对值，取0到π之间）
+        let angleDiff = Math.abs(currentAngle - firstAngle)
+        if (angleDiff > Math.PI) {
+          angleDiff = 2 * Math.PI - angleDiff
+        }
+
+        // 判断夹角是否大于45度（π/4）
+        // 如果大于45度，第一次点击方向为短轴，鼠标方向为长轴
+        // 如果小于45度，第一次点击方向为长轴，鼠标方向为短轴
+        let longRadius: number
+        let shortRadius: number
+        let rotationAngle: number
+
+        if (angleDiff > Math.PI / 4) {
+          // 夹角大于45度：第一次方向为短轴
+          shortRadius = firstRadius
+          longRadius = currentRadius
+          rotationAngle = firstAngle
+        } else {
+          // 夹角小于45度：第一次方向为长轴
+          longRadius = firstRadius
+          shortRadius = currentRadius
+          rotationAngle = firstAngle + Math.PI / 2 // 垂直方向
+        }
+
+        // 使用参数方程生成椭圆的点（考虑旋转）
+        const points: Coordinate[] = []
+        const segments = 64
+        for (let i = 0; i <= segments; i++) {
+          const angle = (2 * Math.PI * i) / segments
+
+          // 未旋转的椭圆点
+          const localX = longRadius * Math.cos(angle)
+          const localY = shortRadius * Math.sin(angle)
+
+          // 应用旋转
+          const rotatedX = localX * Math.cos(rotationAngle) - localY * Math.sin(rotationAngle)
+          const rotatedY = localX * Math.sin(rotationAngle) + localY * Math.cos(rotationAngle)
+
+          // 加上中心点
+          points.push([center[0] + rotatedX, center[1] + rotatedY])
+        }
+
+        return geometry ? geometry.setCoordinates([points]) : new Polygon([points])
+      }
+    }
 
     // 创建绘制交互
     const draw = new Draw({
       source: layer.getSource()!,
-      type: options.type
+      type: drawType as 'Point' | 'LineString' | 'Polygon' | 'Circle',
+      geometryFunction
     })
 
     // 绘制完成事件
@@ -423,11 +789,38 @@ export default class Graphic {
         const style = this._createStyle(options)
         feature.setStyle(style)
 
+        // 对于椭圆，标记为椭圆类型以便后续特殊处理
+        if (options.type === GraphicType.Ellipse) {
+          feature.set('isEllipse', true)
+        }
+
         if (options.onComplete) {
           options.onComplete(feature)
         }
       }
     })
+
+    // 对于椭圆，监听三个点后自动完成
+    if (options.type === GraphicType.Ellipse) {
+      let clickCount = 0
+      const clickHandler = () => {
+        clickCount++
+        if (clickCount >= 3) {
+          // 第三个点点击后自动完成绘制
+          setTimeout(() => {
+            draw.finishDrawing()
+          }, 100)
+          // 移除监听器
+          map.un('click', clickHandler)
+        }
+      }
+      map.on('click', clickHandler)
+
+      // 绘制开始时重置计数器
+      draw.on('drawstart', () => {
+        clickCount = 0
+      })
+    }
 
     // 绘制中事件
     draw.on('drawabort', () => {
@@ -446,12 +839,47 @@ export default class Graphic {
     map.addInteraction(draw)
     this._currentDraw = draw
 
-    // 启用编辑
-    if (options.editable) {
-      this._currentModify = new Modify({
-        source: layer.getSource()!
-      })
-      map.addInteraction(this._currentModify)
+    // 设置鼠标样式
+    const mapContainer = map.getTargetElement()
+    if (mapContainer) {
+      mapContainer.style.cursor = 'crosshair'
+    }
+
+    // 如果图层可编辑，启用修改交互（持久化到图层）
+    if (editable) {
+      // 如果该图层还没有 Modify 交互，创建一个
+      if (!this._layerModifyInteractions[layerName]) {
+        // 检查图层是否有椭圆要素
+        const hasEllipse = layer.getSource()?.getFeatures().some(f => f.get('isEllipse'))
+
+        if (hasEllipse && this._overlayLayer) {
+          // 为椭圆图层创建特殊的编辑交互
+          const ellipseEdit = new EllipseEditInteraction(
+            layer.getSource()!,
+            this._overlayLayer.getSource()!
+          )
+          this._layerModifyInteractions[layerName] = ellipseEdit
+          map.addInteraction(ellipseEdit)
+        } else {
+          // 创建顶点样式（圆点）
+          const vertexStyle = new Style({
+            image: new OLCircle({
+              radius: 6,
+              fill: new Fill({ color: '#ff6600' }),
+              stroke: new Stroke({ color: '#ffffff', width: 2 })
+            })
+          })
+
+          const modify = new Modify({
+            source: layer.getSource()!,
+            style: vertexStyle
+          })
+          this._layerModifyInteractions[layerName] = modify
+          map.addInteraction(modify)
+        }
+      }
+      // 设置临时引用（用于兼容旧逻辑）
+      this._currentModify = this._layerModifyInteractions[layerName]
     }
 
     // 启用吸附
@@ -482,17 +910,100 @@ export default class Graphic {
       this._currentDraw = null
     }
 
-    // 移除修改交互
-    if (this._currentModify) {
-      map.removeInteraction(this._currentModify)
-      this._currentModify = null
-    }
+    // 注意：不移除 Modify 交互，因为它与图层绑定并持久化存在
+    // 只清空临时引用
+    this._currentModify = null
 
     // 移除吸附交互
     if (this._currentSnap) {
       map.removeInteraction(this._currentSnap)
       this._currentSnap = null
     }
+
+    // 恢复鼠标样式
+    const mapContainer = map.getTargetElement()
+    if (mapContainer) {
+      mapContainer.style.cursor = 'auto'
+    }
+  }
+
+  /**
+   * 设置图层是否可编辑
+   * @param layerName 图层名称
+   * @param editable 是否可编辑
+   * @example
+   * ```typescript
+   * const engine = OLEngine.getInstance()
+   * const graphic = engine.Graphic
+   *
+   * // 禁用默认图层编辑
+   * graphic.setEditable('draw-layer', false)
+   *
+   * // 启用指定图层编辑
+   * graphic.setEditable('custom-layer', true)
+   * ```
+   */
+  setEditable(layerName: string, editable: boolean): void {
+    const map = this.map
+    if (!map) throw new Error('地图未初始化')
+
+    const layer = this._layers[layerName]
+    if (!layer) {
+      throw new Error(`图层 ${layerName} 不存在`)
+    }
+
+    // 更新编辑状态
+    this._layerEditableStates[layerName] = editable
+
+    // 获取该图层的 Modify 交互
+    const existingModify = this._layerModifyInteractions[layerName]
+
+    if (existingModify) {
+      // 如果已有 Modify 交互
+      if (editable) {
+        // 启用编辑：添加到地图
+        if (!map.getInteractions().getArray().includes(existingModify)) {
+          map.addInteraction(existingModify)
+        }
+      } else {
+        // 禁用编辑：从地图移除
+        map.removeInteraction(existingModify)
+      }
+    } else if (editable) {
+      // 没有 Modify 交互且需要编辑：创建新的
+      // 创建顶点样式（圆点）
+      const vertexStyle = new Style({
+        image: new OLCircle({
+          radius: 6,
+          fill: new Fill({ color: '#ff6600' }),
+          stroke: new Stroke({ color: '#ffffff', width: 2 })
+        })
+      })
+
+      const modify = new Modify({
+        source: layer.getSource()!,
+        style: vertexStyle
+      })
+      this._layerModifyInteractions[layerName] = modify
+      map.addInteraction(modify)
+    }
+  }
+
+  /**
+   * 获取图层是否可编辑
+   * @param layerName 图层名称
+   * @returns 是否可编辑
+   * @example
+   * ```typescript
+   * const engine = OLEngine.getInstance()
+   * const graphic = engine.Graphic
+   *
+   * const isEditable = graphic.isEditable('draw-layer')
+   * console.log('图层是否可编辑:', isEditable)
+   * ```
+   */
+  isEditable(layerName: string): boolean {
+    return this._layerEditableStates[layerName] ?? true // 默认为 true
   }
 
   /**
@@ -555,22 +1066,105 @@ export default class Graphic {
     let geometry: Geometry
     if (options.type === GraphicType.Circle) {
       // 圆形需要中心和边界
-      const coords = coordinates as Coordinate[]
+      const coords = coordinates as unknown as Coordinate[]
       if (!coords || coords.length < 2) {
         throw new Error('圆形需要至少两个坐标点（中心和边缘）')
       }
       const center = coords[0] ?? [0, 0]
       const edge = coords[1] ?? [0, 0]
       const radius = Math.sqrt(
-        Math.pow(edge[0] - center[0], 2) + Math.pow(edge[1] - center[1], 2)
+        Math.pow((edge[0] ?? 0) - (center[0] ?? 0), 2) +
+          Math.pow((edge[1] ?? 0) - (center[1] ?? 0), 2)
       )
       geometry = new Circle(center, radius)
+    } else if (options.type === GraphicType.Ellipse) {
+      // 椭圆需要三个点：中心、短轴端点、长轴端点
+      const coords = coordinates as unknown as Coordinate[]
+      if (!coords || coords.length < 2) {
+        throw new Error('椭圆需要至少两个坐标点（中心和短轴端点）')
+      }
+      const center = coords[0] ?? [0, 0]
+      const shortAxis = coords[1] ?? [0, 0]
+      const longAxis = coords[2]
+
+      // 如果只有两个点，创建圆形
+      if (!longAxis) {
+        const dx = shortAxis[0] - center[0]
+        const dy = shortAxis[1] - center[1]
+        const radius = Math.sqrt(dx * dx + dy * dy)
+
+        const points: Coordinate[] = []
+        const segments = 64
+        for (let i = 0; i <= segments; i++) {
+          const angle = (2 * Math.PI * i) / segments
+          const x = center[0] + radius * Math.cos(angle)
+          const y = center[1] + radius * Math.sin(angle)
+          points.push([x, y])
+        }
+        geometry = new Polygon([points])
+      } else {
+        // 计算短半轴长度和角度
+        const dx = shortAxis[0] - center[0]
+        const dy = shortAxis[1] - center[1]
+        const shortRadius = Math.sqrt(dx * dx + dy * dy)
+        const shortAngle = Math.atan2(dy, dx)
+
+        // 计算长半轴长度
+        const longDx = longAxis[0] - center[0]
+        const longDy = longAxis[1] - center[1]
+        const longRadius = Math.sqrt(longDx * longDx + longDy * longDy)
+
+        // 使用参数方程生成旋转的椭圆
+        const points: Coordinate[] = []
+        const segments = 64
+        for (let i = 0; i <= segments; i++) {
+          const angle = (2 * Math.PI * i) / segments
+
+          // 未旋转的椭圆点
+          const localX = longRadius * Math.cos(angle)
+          const localY = shortRadius * Math.sin(angle)
+
+          // 应用旋转
+          const rotatedX = localX * Math.cos(shortAngle) - localY * Math.sin(shortAngle)
+          const rotatedY = localX * Math.sin(shortAngle) + localY * Math.cos(shortAngle)
+
+          // 加上中心点
+          points.push([center[0] + rotatedX, center[1] + rotatedY])
+        }
+
+        geometry = new Polygon([points])
+      }
     } else if (options.type === GraphicType.Point) {
       geometry = new Point(coordinates as unknown as Coordinate)
     } else if (options.type === GraphicType.LineString) {
       geometry = new LineString(coordinates as unknown as Coordinate[])
     } else if (options.type === GraphicType.Polygon) {
       geometry = new Polygon(coordinates as unknown as Coordinate[][])
+    } else if (options.type === GraphicType.Square) {
+      // 正方形：使用 LineString + createRegularPolygon 创建
+      const coords = coordinates as unknown as Coordinate[]
+      if (!coords || coords.length < 2) {
+        throw new Error('正方形需要至少两个坐标点（对角线）')
+      }
+      // 计算正方形的四个顶点
+      // @ts-expect-error: createRegularPolygon is static method of Draw
+      const createRegularPolygon = Draw.createRegularPolygon
+      const geomFunc = createRegularPolygon(4)
+      geometry = geomFunc(coords)
+    } else if (options.type === GraphicType.Box) {
+      // 矩形：使用 LineString + createBox 创建
+      const coords = coordinates as unknown as Coordinate[]
+      if (!coords || coords.length < 2) {
+        throw new Error('矩形需要至少两个坐标点（对角线）')
+      }
+      // 计算矩形的四个顶点
+      // @ts-expect-error: createBox is a static method on Draw class
+      const createBox = Draw.createBox as () => (
+        coordinates: Coordinate[],
+        geometry?: Polygon
+      ) => Polygon
+      const geomFunc = createBox()
+      geometry = geomFunc(coords)
     } else {
       // 对于其他类型，使用通用创建方式
       const coords = coordinates as unknown[]
@@ -685,7 +1279,18 @@ export default class Graphic {
 
     const layer = this._layers[layerName]
     if (layer) {
+      // 移除图层
       map.removeLayer(layer)
+
+      // 移除关联的 Modify 交互
+      const modify = this._layerModifyInteractions[layerName]
+      if (modify) {
+        map.removeInteraction(modify)
+        delete this._layerModifyInteractions[layerName]
+      }
+
+      // 清理状态
+      delete this._layerEditableStates[layerName]
       delete this._layers[layerName]
     }
   }
@@ -703,13 +1308,22 @@ export default class Graphic {
     const map = this.map
     if (!map) return
 
+    // 移除所有 Modify 交互
+    Object.values(this._layerModifyInteractions).forEach((modify) => {
+      map.removeInteraction(modify)
+    })
+    this._layerModifyInteractions = {}
+
+    // 移除所有图层
     Object.values(this._layers).forEach((layer) => {
       map.removeLayer(layer)
     })
 
+    // 清理所有状态
     Object.keys(this._layers).forEach((key) => {
       delete this._layers[key]
     })
+    this._layerEditableStates = {}
   }
 
   /**

@@ -1,0 +1,126 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  # 仅在推送到 main 分支时触发部署
+  push:
+    branches: [ "main" ]
+  # 为 PR 创建预览构建
+  pull_request:
+    branches: [ "main" ]
+
+# 允许一个并发的部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # 构建和部署作业（仅在 main 分支推送时执行）
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
+
+    - name: Get pnpm version
+      run: |
+        echo "📦 当前 pnpm 版本："
+        pnpm --version
+        echo "✅ 使用 pnpm 进行构建"
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build
+      run: pnpm build
+
+    - name: Setup Pages
+      id: pages
+      uses: actions/configure-pages@v4
+      continue-on-error: true
+
+    # 检查 Pages 是否已配置
+    - name: Check Pages setup
+      run: |
+        if [ "${{ steps.pages.outcome }}" == "failure" ]; then
+          echo "❌ GitHub Pages 未正确配置"
+          echo "请在仓库设置中启用 GitHub Pages："
+          echo "1. 进入仓库 Settings"
+          echo "2. 找到 Pages section"
+          echo "3. Source 选择 'GitHub Actions'"
+          echo "4. 保存设置"
+          exit 1
+        else
+          echo "✅ GitHub Pages 配置成功"
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./dist
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
+
+  # PR 预览构建作业
+  build-preview:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build
+      run: pnpm build
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-preview-${{ github.number }}
+        path: ./dist
+        retention-days: 7
+
+    - name: Build summary
+      run: |
+        echo "## 🚀 构建预览信息" >> $GITHUB_STEP_SUMMARY
+        echo "- **分支**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **PR**: #${{ github.number }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **构建状态**: ✅ 成功" >> $GITHUB_STEP_SUMMARY
+        echo "- **构建时间**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Node.js 版本**: $(node --version)" >> $GITHUB_STEP_SUMMARY
+        echo "- **pnpm 版本**: $(pnpm --version)" >> $GITHUB_STEP_SUMMARY
