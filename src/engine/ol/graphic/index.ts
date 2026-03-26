@@ -39,55 +39,218 @@ export enum GraphicType {
 
 /**
  * 样式配置接口
+ *
+ * 用于配置图形的填充、边框、图标、文本等样式属性。
+ *
+ * @example
+ * ```typescript
+ * // 基础样式（面）
+ * const style: StyleOptions = {
+ *   fillColor: '#ff0000',      // 红色填充
+ *   fillOpacity: 0.5,          // 50% 透明度
+ *   strokeColor: '#000000',    // 黑色边框
+ *   strokeWidth: 2             // 2px 边框宽度
+ * }
+ *
+ * // 点样式（圆形）
+ * const pointStyle: StyleOptions = {
+ *   radius: 8,                 // 半径 8px
+ *   fillColor: '#ff6600',      // 橙色填充
+ *   strokeColor: '#ffffff',    // 白色边框
+ *   strokeWidth: 2
+ * }
+ *
+ * // 点样式（SVG 图标）
+ * const iconStyle: StyleOptions = {
+ *   iconSrc: '/vue3-ol-template/assets/images/tree_1.svg',  // SVG 图标路径
+ *   iconScale: 0.5,            // 缩放 50%
+ *   iconAnchor: [0.5, 1]       // 锚点在底部中心（适合树木、地标等）
+ * }
+ *
+ * // 带文本标签
+ * const labelStyle: StyleOptions = {
+ *   text: '北京',
+ *   textColor: '#ffffff',
+ *   fontSize: 14,
+ *   textStrokeColor: '#000000',
+ *   textStrokeWidth: 2,
+ *   textOffsetY: -20           // 文本向上偏移 20px
+ * }
+ * ```
  */
 export interface StyleOptions {
-  /** 填充颜色 */
+  /**
+   * 填充颜色
+   * @description 支持 hex 格式（如 '#ff0000'）或 rgba 格式（如 'rgba(255,0,0,0.5)'）
+   * @example '#ff0000' 或 'rgba(255,0,0,0.5)'
+   */
   fillColor?: string
-  /** 填充透明度 (0-1) */
+
+  /**
+   * 填充透明度
+   * @description 取值范围 0-1，仅当 fillColor 为 hex 格式时生效
+   * @default 1
+   * @example 0.5 // 50% 透明度
+   */
   fillOpacity?: number
-  /** 边框颜色 */
+
+  /**
+   * 边框颜色
+   * @description 支持 hex 格式或 rgba 格式
+   * @example '#000000' 或 'rgba(0,0,0,0.8)'
+   */
   strokeColor?: string
-  /** 边框宽度 */
+
+  /**
+   * 边框宽度
+   * @description 单位为像素
+   * @default 2
+   * @example 3 // 3px 宽度
+   */
   strokeWidth?: number
-  /** 边框透明度 (0-1) */
+
+  /**
+   * 边框透明度
+   * @description 取值范围 0-1，仅当 strokeColor 为 hex 格式时生效
+   * @default 1
+   */
   strokeOpacity?: number
-  /** 边框虚线样式 [dash, gap] */
+
+  /**
+   * 边框虚线样式
+   * @description 数组形式 [实线长度, 间隙长度]
+   * @example [10, 5] // 10px 实线，5px 间隙
+   */
   lineDash?: number[]
-  /** 点半径 */
+
+  /**
+   * 点半径
+   * @description 仅对 Point 类型生效，当未设置 iconSrc 时使用圆形样式
+   * @example 8 // 半径 8px 的圆形
+   */
   radius?: number
-  /** 图标路径 (仅点类型) */
+
+  /**
+   * 图标路径
+   * @description 仅对 Point 类型生效，支持 PNG、SVG 等图片格式
+   * @description SVG 图标会自动缩放且保持清晰，推荐用于地图 POI
+   * @example '/vue3-ol-template/assets/images/tree_1.svg'
+   */
   iconSrc?: string
-  /** 图标缩放 (仅点类型) */
+
+  /**
+   * 图标缩放比例
+   * @description 仅当设置 iconSrc 时生效
+   * @default 1
+   * @example 0.5 // 缩小到 50%
+   */
   iconScale?: number
-  /** 图标锚点 [x, y]，默认 [0.5, 0.5] (仅点类型) */
+
+  /**
+   * 图标锚点
+   * @description 仅当设置 iconSrc 时生效，定义图标相对于坐标点的位置
+   * @description 值为归一化坐标 [x, y]，范围 0-1
+   * @description - [0, 0]: 左上角
+   * @description - [0.5, 0.5]: 正中心（默认）
+   * @description - [0.5, 1]: 底部中心（适合树木、地标等）
+   * @description - [1, 1]: 右下角
+   * @default [0.5, 0.5]
+   * @example [0.5, 1] // 底部中心锚点，适合树木图标
+   */
   iconAnchor?: [number, number]
-  /** 文本标签 */
+
+  /**
+   * 文本标签内容
+   * @description 设置后会在图形上显示文本标签
+   * @example '北京'
+   */
   text?: string
-  /** 文本字体 */
+
+  /**
+   * 文本字体族
+   * @default 'Arial'
+   * @example 'Microsoft YaHei'
+   */
   fontFamily?: string
-  /** 文本大小 */
+
+  /**
+   * 文本大小
+   * @description 单位为像素
+   * @default 14
+   */
   fontSize?: number
-  /** 文本粗细 */
+
+  /**
+   * 文本粗细
+   * @default 'normal'
+   * @example 'bold'
+   */
   fontWeight?: string
-  /** 文本颜色 */
+
+  /**
+   * 文本颜色
+   * @default '#000000'
+   * @example '#ffffff'
+   */
   textColor?: string
-  /** 文本描边颜色 */
+
+  /**
+   * 文本描边颜色
+   * @description 用于文本背景描边，提高可读性
+   * @default '#ffffff'
+   */
   textStrokeColor?: string
-  /** 文本描边宽度 */
+
+  /**
+   * 文本描边宽度
+   * @description 单位为像素
+   * @default 2
+   */
   textStrokeWidth?: number
-  /** 文本水平对齐方式 */
+
+  /**
+   * 文本水平对齐方式
+   * @default 'center'
+   */
   textAlign?: 'left' | 'center' | 'right' | 'start' | 'end'
-  /** 文本垂直对齐方式 */
+
+  /**
+   * 文本垂直对齐方式
+   * @default 'middle'
+   */
   textBaseline?: 'top' | 'middle' | 'bottom' | 'alphabetic' | 'hanging'
-  /** 文本偏移 [x, y] */
+
+  /**
+   * 文本 X 轴偏移
+   * @description 单位为像素，正值向右偏移
+   * @example 10 // 向右偏移 10px
+   */
   textOffsetX?: number
-  /** 文本 Y 轴偏移 */
+
+  /**
+   * 文本 Y 轴偏移
+   * @description 单位为像素，正值向下偏移，负值向上偏移
+   * @example -20 // 向上偏移 20px（常用于标签显示在图标上方）
+   */
   textOffsetY?: number
-  /** 文本旋转角度 (弧度) */
+
+  /**
+   * 文本旋转角度
+   * @description 单位为弧度，正值顺时针旋转
+   * @example Math.PI / 4 // 旋转 45 度
+   */
   textRotation?: number
-  /** 文本最大显示分辨率 */
+
+  /**
+   * 文本最大显示分辨率
+   * @description 超过此分辨率时文本不显示
+   */
   textMaxResolution?: number
-  /** 编辑顶点样式 */
+
+  /**
+   * 编辑顶点样式
+   * @description 用于自定义编辑模式下顶点的样式
+   */
   vertexStyle?: {
     /** 顶点填充颜色 */
     fillColor?: string
@@ -102,33 +265,187 @@ export interface StyleOptions {
 
 /**
  * 绘制配置接口
+ *
+ * 继承自 StyleOptions，用于配置绘制交互的行为和样式。
+ *
+ * @example
+ * ```typescript
+ * const engine = OLEngine.getInstance()
+ * const graphic = engine.Graphic
+ *
+ * // 绘制普通点（圆形）
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   radius: 8,
+ *   fillColor: '#ff0000',
+ *   strokeColor: '#000000',
+ *   strokeWidth: 2
+ * })
+ *
+ * // 绘制带 SVG 图标的点
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   iconSrc: '/vue3-ol-template/assets/images/tree_1.svg',
+ *   iconScale: 0.5,
+ *   iconAnchor: [0.5, 1],  // 底部中心锚点
+ *   text: '标记点',
+ *   textColor: '#ffffff',
+ *   textOffsetY: -20
+ * })
+ *
+ * // 绘制线
+ * graphic.startDraw({
+ *   type: GraphicType.LineString,
+ *   strokeColor: '#00ff00',
+ *   strokeWidth: 3,
+ *   lineDash: [10, 5]
+ * })
+ *
+ * // 绘制椭圆
+ * graphic.startDraw({
+ *   type: GraphicType.Ellipse,
+ *   fillColor: 'rgba(255,0,0,0.3)',
+ *   strokeColor: '#ff0000',
+ *   strokeWidth: 2
+ * })
+ * ```
  */
 export interface DrawOptions extends StyleOptions {
-  /** 图形类型 */
+  /**
+   * 图形类型
+   * @description 必填，指定要绘制的图形类型
+   * @see GraphicType
+   */
   type: GraphicType
-  /** 图层是否可编辑，默认 true */
+
+  /**
+   * 图层是否可编辑
+   * @description 设置为 true 时，绘制完成后可以通过拖拽顶点编辑图形
+   * @default true
+   */
   editable?: boolean
-  /** 是否吸附 */
+
+  /**
+   * 是否启用吸附功能
+   * @description 启用后，绘制时会自动吸附到已有要素的顶点
+   * @default true
+   */
   snap?: boolean
-  /** 绘制完成回调 */
+
+  /**
+   * 绘制完成回调
+   * @description 图形绘制完成时触发，返回创建的 Feature 实例
+   */
   onComplete?: (feature: Feature) => void
-  /** 绘制中回调 */
+
+  /**
+   * 绘制中回调
+   * @description 绘制过程中触发
+   */
   onDraw?: (feature: Feature) => void
-  /** 图层名称，默认 'draw-layer' */
+
+  /**
+   * 图层名称
+   * @description 用于管理多个绘图图层，不同名称的图形存储在不同图层
+   * @default 'draw-layer'
+   */
   layerName?: string
 }
 
 /**
  * 直接绘制配置接口
+ *
+ * 用于通过坐标直接添加图形要素，无需用户交互绘制。
+ * 坐标默认使用经纬度（EPSG:4326），会自动转换为 Web Mercator（EPSG:3857）。
+ *
+ * @example
+ * ```typescript
+ * const engine = OLEngine.getInstance()
+ * const graphic = engine.Graphic
+ *
+ * // 添加点（圆形）
+ * const pointFeature = graphic.addFeature({
+ *   type: GraphicType.Point,
+ *   coordinates: [116.4, 39.9],  // [经度, 纬度]
+ *   radius: 10,
+ *   fillColor: '#ff0000',
+ *   properties: { name: '北京', id: 1 }
+ * })
+ *
+ * // 添加点（SVG 图标）
+ * const iconFeature = graphic.addFeature({
+ *   type: GraphicType.Point,
+ *   coordinates: [116.4, 39.9],
+ *   iconSrc: '/vue3-ol-template/assets/images/tree_1.svg',
+ *   iconScale: 0.5,
+ *   iconAnchor: [0.5, 1],
+ *   text: '树木',
+ *   textOffsetY: -20
+ * })
+ *
+ * // 添加线
+ * const lineFeature = graphic.addFeature({
+ *   type: GraphicType.LineString,
+ *   coordinates: [[116.4, 39.9], [116.5, 40.0], [116.6, 40.1]],
+ *   strokeColor: '#00ff00',
+ *   strokeWidth: 3
+ * })
+ *
+ * // 添加面
+ * const polygonFeature = graphic.addFeature({
+ *   type: GraphicType.Polygon,
+ *   coordinates: [[[116.4, 39.9], [116.5, 39.9], [116.5, 40.0], [116.4, 39.9]]],
+ *   fillColor: '#0000ff',
+ *   fillOpacity: 0.3
+ * })
+ *
+ * // 添加圆（中心点 + 边缘点）
+ * const circleFeature = graphic.addFeature({
+ *   type: GraphicType.Circle,
+ *   coordinates: [[116.4, 39.9], [116.5, 39.9]],  // [中心, 边缘]
+ *   fillColor: '#ffff00',
+ *   fillOpacity: 0.5
+ * })
+ *
+ * // 添加椭圆（中心 + 短轴端点 + 长轴端点）
+ * const ellipseFeature = graphic.addFeature({
+ *   type: GraphicType.Ellipse,
+ *   coordinates: [[116.4, 39.9], [116.45, 39.9], [116.4, 39.95]],
+ *   fillColor: 'rgba(255,0,255,0.3)',
+ *   strokeColor: '#ff00ff'
+ * })
+ * ```
  */
 export interface AddFeatureOptions extends StyleOptions {
-  /** 图形类型 */
+  /**
+   * 图形类型
+   * @description 必填，指定要添加的图形类型
+   * @see GraphicType
+   */
   type: GraphicType
-  /** 顶点坐标 (经纬度) */
+
+  /**
+   * 顶点坐标
+   * @description 必填，坐标格式根据图形类型不同：
+   * - Point: [经度, 纬度]
+   * - LineString: [[经度1, 纬度1], [经度2, 纬度2], ...]
+   * - Polygon: [[[经度1, 纬度1], [经度2, 纬度2], ...]]（首尾闭合）
+   * - Circle: [[中心经度, 中心纬度], [边缘经度, 边缘纬度]]
+   * - Ellipse: [[中心经度, 中心纬度], [短轴端点经度, 短轴端点纬度], [长轴端点经度, 长轴端点纬度]]
+   */
   coordinates: Coordinate | Coordinate[][] | Coordinate[][][] | Coordinate[][]
-  /** 图层名称，默认 'draw-layer' */
+
+  /**
+   * 图层名称
+   * @default 'draw-layer'
+   */
   layerName?: string
-  /** 要素属性 */
+
+  /**
+   * 要素属性
+   * @description 自定义属性，可通过 feature.get(key) 获取
+   * @example { name: '北京', id: 1, type: 'city' }
+   */
   properties?: Record<string, unknown>
 }
 
@@ -594,68 +911,139 @@ export default class Graphic {
     }
   }
 
-  /**
-   * 开始绘制图形（使用鼠标绘制）
-   * @param options 绘制配置
-   * @example
-   * ```typescript
-   * // 绘制点
-   * const engine = OLEngine.getInstance()
-   * const graphic = engine.Graphic
-   * graphic.startDraw({
-   *   type: GraphicType.Point,
-   *   radius: 8,
-   *   fillColor: '#ff0000',
-   *   strokeColor: '#000000',
-   *   strokeWidth: 2,
-   *   onComplete: (feature) => {
-   *     console.log('绘制完成', feature)
-   *   }
-   * })
-   *
-   * // 绘制线
-   * graphic.startDraw({
-   *   type: GraphicType.LineString,
-   *   strokeColor: '#00ff00',
-   *   strokeWidth: 3
-   * })
-   *
-   * // 绘制面
-   * graphic.startDraw({
-   *   type: GraphicType.Polygon,
-   *   fillColor: '#0000ff',
-   *   fillOpacity: 0.5,
-   *   strokeColor: '#000000',
-   *   strokeWidth: 2
-   * })
-   *
-   * // 绘制正方形
-   * graphic.startDraw({
-   *   type: GraphicType.Square,
-   *   strokeColor: '#ff00ff',
-   *   strokeWidth: 2,
-   *   fillColor: 'rgba(255,0,255,0.3)'
-   * })
-   *
-   * // 绘制矩形
-   * graphic.startDraw({
-   *   type: GraphicType.Box,
-   *   strokeColor: '#ffff00',
-   *   strokeWidth: 2,
-   *   fillColor: 'rgba(255,255,0,0.3)'
-   * })
-   *
-   * // 绘制带标签的点
-   * graphic.startDraw({
-   *   type: GraphicType.Point,
-   *   iconSrc: '/marker.png',
-   *   iconScale: 0.5,
-   *   text: '标签文字',
-   *   textColor: '#ffffff',
-   *   fontSize: 14
-   * })
-   * ```
-   */
+/**
+ * 开始绘制图形（使用鼠标绘制）
+ *
+ * @description 在地图上启动绘制交互，用户可通过鼠标点击绘制各种图形。
+ * 绘制完成后可设置样式回调，支持圆形点、SVG/PNG 图标点、线、面、圆、椭圆等。
+ *
+ * @param options 绘制配置选项
+ *
+ * @example
+ * ```typescript
+ * const engine = OLEngine.getInstance()
+ * const graphic = engine.Graphic
+ *
+ * // ==================== 点类型 ====================
+ *
+ * // 1. 绘制普通点（圆形样式）
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   radius: 8,
+ *   fillColor: '#ff0000',
+ *   strokeColor: '#000000',
+ *   strokeWidth: 2,
+ *   onComplete: (feature) => {
+ *     console.log('绘制完成', feature)
+ *   }
+ * })
+ *
+ * // 2. 绘制带 SVG 图标的点（树木）
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   iconSrc: '/vue3-ol-template/assets/images/tree_1.svg',
+ *   iconScale: 0.5,
+ *   iconAnchor: [0.5, 1],  // 底部中心锚点
+ *   text: '树木',
+ *   textColor: '#ffffff',
+ *   fontSize: 12,
+ *   textStrokeColor: '#000000',
+ *   textOffsetY: -20
+ * })
+ *
+ * // 3. 绘制带 PNG 图标的点（地标）
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   iconSrc: '/vue3-ol-template/assets/images/marker.png',
+ *   iconScale: 1,
+ *   iconAnchor: [0.5, 1]  // 底部中心
+ * })
+ *
+ * // ==================== 线类型 ====================
+ *
+ * // 绘制线
+ * graphic.startDraw({
+ *   type: GraphicType.LineString,
+ *   strokeColor: '#00ff00',
+ *   strokeWidth: 3
+ * })
+ *
+ * // 绘制虚线
+ * graphic.startDraw({
+ *   type: GraphicType.LineString,
+ *   strokeColor: '#ff0000',
+ *   strokeWidth: 2,
+ *   lineDash: [10, 5]
+ * })
+ *
+ * // ==================== 面类型 ====================
+ *
+ * // 绘制面
+ * graphic.startDraw({
+ *   type: GraphicType.Polygon,
+ *   fillColor: '#0000ff',
+ *   fillOpacity: 0.5,
+ *   strokeColor: '#000000',
+ *   strokeWidth: 2
+ * })
+ *
+ * // ==================== 特殊图形 ====================
+ *
+ * // 绘制正方形
+ * graphic.startDraw({
+ *   type: GraphicType.Square,
+ *   strokeColor: '#ff00ff',
+ *   strokeWidth: 2,
+ *   fillColor: 'rgba(255,0,255,0.3)'
+ * })
+ *
+ * // 绘制矩形
+ * graphic.startDraw({
+ *   type: GraphicType.Box,
+ *   strokeColor: '#ffff00',
+ *   strokeWidth: 2,
+ *   fillColor: 'rgba(255,255,0,0.3)'
+ * })
+ *
+ * // 绘制圆（两点：中心 + 边缘）
+ * graphic.startDraw({
+ *   type: GraphicType.Circle,
+ *   fillColor: 'rgba(255,255,0,0.3)',
+ *   strokeColor: '#ffff00',
+ *   strokeWidth: 2
+ * })
+ *
+ * // 绘制椭圆（三点：中心 + 短轴端点 + 长轴端点）
+ * graphic.startDraw({
+ *   type: GraphicType.Ellipse,
+ *   fillColor: 'rgba(255,0,255,0.3)',
+ *   strokeColor: '#ff00ff',
+ *   strokeWidth: 2
+ * })
+ *
+ * // ==================== 高级选项 ====================
+ *
+ * // 禁用编辑和吸附
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   radius: 10,
+ *   editable: false,  // 禁用编辑
+ *   snap: false,      // 禁用吸附
+ *   layerName: 'my-layer'  // 自定义图层名
+ * })
+ *
+ * // 带回调的绘制
+ * graphic.startDraw({
+ *   type: GraphicType.Point,
+ *   iconSrc: '/vue3-ol-template/assets/images/tree_2.svg',
+ *   iconScale: 0.5,
+ *   onComplete: (feature) => {
+ *     console.log('绘制完成', feature.getGeometry()?.getCoordinates())
+ *     feature.set('createdAt', new Date().toISOString())
+ *   }
+ * })
+ * ```
+ */
   startDraw(options: DrawOptions): void {
     const map = this.map
     if (!map) throw new Error('地图未初始化')
@@ -1006,52 +1394,153 @@ export default class Graphic {
     return this._layerEditableStates[layerName] ?? true // 默认为 true
   }
 
-  /**
-   * 直接添加要素（通过坐标参数）
-   * @param options 添加配置
-   * @returns 创建的 Feature 实例
-   * @example
-   * ```typescript
-   * const engine = OLEngine.getInstance()
-   * const graphic = engine.Graphic
-   *
-   * // 添加点
-   * const pointFeature = graphic.addFeature({
-   *   type: GraphicType.Point,
-   *   coordinates: [116.4, 39.9],
-   *   radius: 10,
-   *   fillColor: '#ff0000',
-   *   properties: { name: '北京', id: 1 }
-   * })
-   *
-   * // 添加线
-   * const lineFeature = graphic.addFeature({
-   *   type: GraphicType.LineString,
-   *   coordinates: [[116.4, 39.9], [116.5, 40.0], [116.6, 40.1]],
-   *   strokeColor: '#00ff00',
-   *   strokeWidth: 3
-   * })
-   *
-   * // 添加面
-   * const polygonFeature = graphic.addFeature({
-   *   type: GraphicType.Polygon,
-   *   coordinates: [[[116.4, 39.9], [116.5, 39.9], [116.5, 40.0], [116.4, 39.9]]],
-   *   fillColor: '#0000ff',
-   *   fillOpacity: 0.3,
-   *   strokeColor: '#000000',
-   *   strokeWidth: 2
-   * })
-   *
-   * // 添加圆
-   * const circleFeature = graphic.addFeature({
-   *   type: GraphicType.Circle,
-   *   coordinates: [[116.4, 39.9], [116.5, 39.9]],
-   *   fillColor: '#ffff00',
-   *   fillOpacity: 0.5,
-   *   strokeWidth: 2
-   * })
-   * ```
-   */
+/**
+ * 直接添加要素（通过坐标参数）
+ *
+ * @description 无需用户交互，直接通过坐标参数在地图上添加图形要素。
+ * 坐标使用经纬度（EPSG:4326），会自动转换为 Web Mercator（EPSG:3857）。
+ *
+ * @param options 添加配置选项
+ * @returns 创建的 Feature 实例
+ *
+ * @example
+ * ```typescript
+ * const engine = OLEngine.getInstance()
+ * const graphic = engine.Graphic
+ *
+ * // ==================== 点类型 ====================
+ *
+ * // 1. 添加普通点（圆形样式）
+ * const pointFeature = graphic.addFeature({
+ *   type: GraphicType.Point,
+ *   coordinates: [116.4, 39.9],  // [经度, 纬度]
+ *   radius: 10,
+ *   fillColor: '#ff0000',
+ *   strokeColor: '#000000',
+ *   strokeWidth: 2,
+ *   properties: { name: '北京', id: 1 }
+ * })
+ *
+ * // 2. 添加带 SVG 图标的点（树木）
+ * const treeFeature = graphic.addFeature({
+ *   type: GraphicType.Point,
+ *   coordinates: [116.4, 39.9],
+ *   iconSrc: '/vue3-ol-template/assets/images/tree_1.svg',
+ *   iconScale: 0.5,
+ *   iconAnchor: [0.5, 1],  // 底部中心锚点
+ *   text: '树木A',
+ *   textColor: '#ffffff',
+ *   textStrokeColor: '#000000',
+ *   textOffsetY: -20,
+ *   properties: { type: 'tree', height: 15 }
+ * })
+ *
+ * // 3. 添加带 PNG 图标的点
+ * const markerFeature = graphic.addFeature({
+ *   type: GraphicType.Point,
+ *   coordinates: [116.4074, 39.9042],
+ *   iconSrc: '/vue3-ol-template/assets/images/marker.png',
+ *   iconScale: 1,
+ *   iconAnchor: [0.5, 1]
+ * })
+ *
+ * // ==================== 线类型 ====================
+ *
+ * // 添加线
+ * const lineFeature = graphic.addFeature({
+ *   type: GraphicType.LineString,
+ *   coordinates: [[116.4, 39.9], [116.5, 40.0], [116.6, 40.1]],
+ *   strokeColor: '#00ff00',
+ *   strokeWidth: 3
+ * })
+ *
+ * // 添加虚线
+ * const dashedLine = graphic.addFeature({
+ *   type: GraphicType.LineString,
+ *   coordinates: [[116.0, 39.5], [117.0, 40.5]],
+ *   strokeColor: '#ff0000',
+ *   strokeWidth: 2,
+ *   lineDash: [10, 5]
+ * })
+ *
+ * // ==================== 面类型 ====================
+ *
+ * // 添加面（注意首尾坐标需闭合）
+ * const polygonFeature = graphic.addFeature({
+ *   type: GraphicType.Polygon,
+ *   coordinates: [[[116.4, 39.9], [116.5, 39.9], [116.5, 40.0], [116.4, 40.0], [116.4, 39.9]]],
+ *   fillColor: '#0000ff',
+ *   fillOpacity: 0.3,
+ *   strokeColor: '#000000',
+ *   strokeWidth: 2
+ * })
+ *
+ * // ==================== 特殊图形 ====================
+ *
+ * // 添加圆（中心点 + 边缘点确定半径）
+ * const circleFeature = graphic.addFeature({
+ *   type: GraphicType.Circle,
+ *   coordinates: [[116.4, 39.9], [116.5, 39.9]],  // [中心, 边缘]
+ *   fillColor: '#ffff00',
+ *   fillOpacity: 0.5,
+ *   strokeColor: '#ff9900',
+ *   strokeWidth: 2
+ * })
+ *
+ * // 添加椭圆（中心 + 短轴端点 + 长轴端点）
+ * const ellipseFeature = graphic.addFeature({
+ *   type: GraphicType.Ellipse,
+ *   coordinates: [
+ *     [116.4, 39.9],      // 中心点
+ *     [116.45, 39.9],     // 短轴端点
+ *     [116.4, 39.95]      // 长轴端点
+ *   ],
+ *   fillColor: 'rgba(255,0,255,0.3)',
+ *   strokeColor: '#ff00ff',
+ *   strokeWidth: 2,
+ *   properties: { name: '椭圆区域' }
+ * })
+ *
+ * // 添加正方形（对角线两点）
+ * const squareFeature = graphic.addFeature({
+ *   type: GraphicType.Square,
+ *   coordinates: [[116.4, 39.9], [116.5, 40.0]],
+ *   fillColor: 'rgba(255,0,0,0.3)',
+ *   strokeColor: '#ff0000'
+ * })
+ *
+ * // 添加矩形（对角线两点）
+ * const boxFeature = graphic.addFeature({
+ *   type: GraphicType.Box,
+ *   coordinates: [[116.4, 39.9], [116.6, 40.1]],
+ *   fillColor: 'rgba(0,255,0,0.3)',
+ *   strokeColor: '#00ff00'
+ * })
+ *
+ * // ==================== 高级用法 ====================
+ *
+ * // 批量添加带自定义属性的点
+ * const cities = [
+ *   { coords: [116.4074, 39.9042], name: '北京', population: 2171 },
+ *   { coords: [121.4737, 31.2304], name: '上海', population: 2487 },
+ *   { coords: [113.2644, 23.1291], name: '广州', population: 1530 }
+ * ]
+ *
+ * cities.forEach(city => {
+ *   graphic.addFeature({
+ *     type: GraphicType.Point,
+ *     coordinates: city.coords,
+ *     iconSrc: '/vue3-ol-template/assets/images/tree_2.svg',
+ *     iconScale: 0.3,
+ *     iconAnchor: [0.5, 1],
+ *     text: city.name,
+ *     textOffsetY: -15,
+ *     layerName: 'cities-layer',
+ *     properties: city
+ *   })
+ * })
+ * ```
+ */
   addFeature(options: AddFeatureOptions): Feature {
     const map = this.map
     if (!map) throw new Error('地图未初始化')
