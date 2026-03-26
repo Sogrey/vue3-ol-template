@@ -12,6 +12,7 @@ import Map from 'ol/Map.js';
 import View from 'ol/View.js';
 
 import Camera from './camera/index.ts';
+import Graphic from './graphic/index.ts';
 
 /**
  * OLEngine
@@ -44,6 +45,7 @@ export default class OLEngine {
 
   // 模块
   Camera: Camera = new Camera(this)
+  Graphic: Graphic = new Graphic(this)
 
   /**
    * 私有构造函数
